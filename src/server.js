@@ -4,6 +4,8 @@ const { port } = require('./config/env');
 
 connectDB();
 
+
+
 app.listen(port, () => {
     console.log(`OpsMind AI running on port ${port} 🚀`);
 });

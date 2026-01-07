@@ -1,32 +1,33 @@
 const { askOpsMind } = require('../services/ragChatService');
-
 const ChatHistory = require('../models/ChatHistory');
 
 const askQuestion = async (req, res) => {
-
     try {
-
-        const userQuery = req.body.query;
+        const { query } = req.body;
         const userId = req.user.id;
 
-        const result = await askOpsMind(userQuery);
+        if (!query) {
+            return res.status(400).json({ msg: "Query is required" });
+        }
 
-        const history = new ChatHistory({
+        const result = await askOpsMind(query);
+
+        // Persist chat history (users only see THEIR history)
+        await ChatHistory.create({
             userId,
-            query: userQuery,
-            response: result.response,
+            query,
+            response: result.answer,
             sources: result.sources
         });
-
-        await history.save();
 
         res.json({
-            answer: result.response,
+            answer: result.answer,
             sources: result.sources
         });
 
-    } catch(err) {
-        res.status(500).json({ msg: err.message });
+    } catch (err) {
+        console.error("Chat Error:", err.message);
+        res.status(500).json({ msg: "Chat failed" });
     }
 };
 

@@ -14,5 +14,7 @@ app.use(bodyParser.urlencoded({ extended: true }));
 app.use('/api/auth', require('./routes/authRoutes'));
 app.use('/api/admin', require('./routes/adminRoutes'));
 app.use('/api/chat', require('./routes/chatRoutes'));
+app.use('/api/sources', require('./routes/sourceRoutes'));
+
 
 module.exports = app;

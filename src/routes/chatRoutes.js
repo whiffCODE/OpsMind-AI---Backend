@@ -1,10 +1,14 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
 
-const verifyToken = require('../middleware/authMiddleware');
+const verifyToken = require("../middleware/authMiddleware");
+const { askQuestion } = require("../controllers/chatController");
+const { streamChat } = require("../controllers/chatStreamController");
 
-const chatController = require('../controllers/chatController');
+// Normal (non-stream)
+router.post("/ask", verifyToken, askQuestion);
 
-router.post('/ask', verifyToken, chatController.askQuestion);
+// Streaming (SSE)
+router.post("/stream", verifyToken, streamChat);
 
 module.exports = router;

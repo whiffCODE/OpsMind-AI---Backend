@@ -5,7 +5,10 @@ const SOPChunkSchema = new mongoose.Schema({
     docId: String,
     text: String,
     pageNumber: Number,
-    embedding: [Number]
+    embedding: {
+  type: [Number],
+  required: true
+}
 });
 
 module.exports = mongoose.model('SOPChunk', SOPChunkSchema);

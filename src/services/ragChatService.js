@@ -1,39 +1,56 @@
-const axios = require('axios');
-const { retrieveRelevantChunks } = require('./ragService');
+const { GoogleGenerativeAI } = require("@google/generative-ai");
+const { retrieveTopChunks } = require("./retrievalService");
+const { buildContext } = require("./contextService");
 
-const askOpsMind = async (userQuery) => {
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
-    const chunks = await retrieveRelevantChunks(userQuery);
+const streamOpsMind = async (question, onChunk) => {
+    const chunks = await retrieveTopChunks(question, 5);
+    const context = buildContext(chunks, 0.55);
 
-    if (!chunks.length) {
+    if (!context) {
+        onChunk("I don't know based on the current SOP knowledge base.");
         return {
-            response: "I don't know based on the current SOP knowledge base.",
+            finalAnswer: "I don't know based on the current SOP knowledge base.",
             sources: []
         };
     }
 
-    const contextText = chunks.map(c => `Page ${c.pageNumber}: ${c.text}`).join("\n\n");
-
     const prompt = `
-You are OpsMind AI. Answer only from the provided SOP context.
-If the answer is not present, say exactly: I don't know.
+You are OpsMind AI, an enterprise SOP assistant.
 
-Context:
-${contextText}
+RULES:
+- Answer ONLY from the provided SOP context.
+- If the answer is not present, say exactly:
+  "I don't know based on the current SOP knowledge base."
 
-Question: ${userQuery}
+SOP Context:
+${context.contextText}
+
+Question:
+${question}
 `;
 
-    const url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent";
-
-    const llmResponse = await axios.post(`${url}?key=YOUR_API_KEY`, {
-        contents: [{ parts: [{ text: prompt }] }]
+    const model = genAI.getGenerativeModel({
+        model: "gemini-2.5-flash"
     });
 
+    const stream = await model.generateContentStream(prompt);
+
+    let fullAnswer = "";
+
+    for await (const chunk of stream.stream) {
+        const text = chunk.text();
+        if (text) {
+            fullAnswer += text;
+            onChunk(text);
+        }
+    }
+
     return {
-        response: llmResponse.data.candidates[0].content.parts[0].text,
-        sources: chunks.map(c => c.fileName)
+        finalAnswer: fullAnswer,
+        sources: context.sources
     };
 };
 
-module.exports = { askOpsMind };
+module.exports = { streamOpsMind };
