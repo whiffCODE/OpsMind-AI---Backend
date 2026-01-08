@@ -15,6 +15,11 @@ app.use('/api/auth', require('./routes/authRoutes'));
 app.use('/api/admin', require('./routes/adminRoutes'));
 app.use('/api/chat', require('./routes/chatRoutes'));
 app.use('/api/sources', require('./routes/sourceRoutes'));
+app.use("/api/chat-history", require("./routes/chatHistoryRoutes"));
+app.use("/api/profile", require("./routes/profileRoutes"));
+
+
+
 
 
 module.exports = app;

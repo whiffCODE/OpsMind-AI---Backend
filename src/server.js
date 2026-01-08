@@ -7,5 +7,5 @@ connectDB();
 
 
 app.listen(port, () => {
-    console.log(`OpsMind AI running on port ${port} 🚀`);
+    console.log(`OpsMind AI running on port ${port}`);
 });

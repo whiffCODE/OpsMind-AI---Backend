@@ -1,56 +1,79 @@
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 const { retrieveTopChunks } = require("./retrievalService");
-const { buildContext } = require("./contextService");
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
-const streamOpsMind = async (question, onChunk) => {
-    const chunks = await retrieveTopChunks(question, 5);
-    const context = buildContext(chunks, 0.55);
+const FALLBACK =
+  "I don't know based on the current SOP knowledge base.";
 
-    if (!context) {
-        onChunk("I don't know based on the current SOP knowledge base.");
-        return {
-            finalAnswer: "I don't know based on the current SOP knowledge base.",
-            sources: []
-        };
-    }
+/**
+ * Build a clean context block for Gemini
+ */
+function buildContext(chunks) {
+  return chunks
+    .map(
+      (c, i) =>
+        `Source ${i + 1}:
+${c.text.replace(/\s+/g, " ").trim()}`
+    )
+    .join("\n\n");
+}
 
-    const prompt = `
+async function askOpsMind(question) {
+  const chunks = await retrieveTopChunks(question, 5);
+
+  if (!chunks.length) {
+    return {
+      answer: FALLBACK,
+      sources: [],
+      confidence: 0,
+    };
+  }
+
+  const context = buildContext(chunks);
+
+  const prompt = `
 You are OpsMind AI, an enterprise SOP assistant.
 
-RULES:
-- Answer ONLY from the provided SOP context.
-- If the answer is not present, say exactly:
-  "I don't know based on the current SOP knowledge base."
+STRICT RULES:
+- Answer ONLY from the SOP context below
+- Structure the response in clear paragraphs or numbered points
+- Do NOT use markdown symbols (*, -, ###)
+- Do NOT hallucinate or add external knowledge
+- If the answer is not clearly present, say exactly:
+"${FALLBACK}"
 
 SOP Context:
-${context.contextText}
+${context}
 
-Question:
+User Question:
 ${question}
 `;
 
+  let answer = FALLBACK;
+
+  try {
     const model = genAI.getGenerativeModel({
-        model: "gemini-2.5-flash"
+      // ⚠️ Use a model that works with generateContent
+      model: "models/gemini-2.5-flash",
     });
 
-    const stream = await model.generateContentStream(prompt);
+    const result = await model.generateContent(prompt);
+    answer = result.response.text().trim();
+  } catch (err) {
+    console.error("❌ Gemini generation failed:", err.message);
+  }
 
-    let fullAnswer = "";
+  // Confidence heuristic (simple + explainable)
+  const confidence = Math.min(1, chunks.length / 5);
 
-    for await (const chunk of stream.stream) {
-        const text = chunk.text();
-        if (text) {
-            fullAnswer += text;
-            onChunk(text);
-        }
-    }
+  return {
+    answer,
+    sources: chunks.map(
+      (c) => `${c.docId} • Page ${c.pageNumber || 1}`
+    ),
+    confidence: Number(confidence.toFixed(2)),
+  };
+}
 
-    return {
-        finalAnswer: fullAnswer,
-        sources: context.sources
-    };
-};
-
-module.exports = { streamOpsMind };
+module.exports = { askOpsMind };

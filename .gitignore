@@ -1,2 +1,55 @@
-vertex-sa.json*
-.env*
+# =========================
+# Node.js
+# =========================
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# =========================
+# Environment variables
+# =========================
+.env
+.env.local
+.env.development
+.env.production
+
+# =========================
+# Uploads / generated data
+# =========================
+uploads/
+*.pdf
+
+# =========================
+# Logs
+# =========================
+logs/
+*.log
+
+# =========================
+# OS / Editor
+# =========================
+.DS_Store
+Thumbs.db
+
+# =========================
+# Build / Coverage
+# =========================
+coverage/
+dist/
+build/
+
+# =========================
+# Runtime
+# =========================
+*.pid
+*.seed
+*.pid.lock
+
+# =========================
+# MongoDB
+# =========================
+dump/
+*.bson
+*.json
